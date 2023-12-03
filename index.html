@@ -36,6 +36,28 @@
     <div id="pray"></div>
 
     <script>
+        let loc = localStorage.getItem('location')
+        async function getLocation(){
+            if(!loc){ 
+                const pos = await new Promise((resolve, reject)=>{
+                    navigator.geolocation.getCurrentPosition(resolve, reject)
+                })
+                const lat = pos.coords.latitude
+                const long = pos.coords.longitude
+                localStorage.setItem('location', [lat, long])
+                loc = localStorage.getItem('location')
+            }
+
+            let corArr = loc.split(',')
+            console.log(corArr);
+            const geolocationApi = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${corArr[0]}&longitude=${corArr[1]}&localityLanguage=en`;
+
+            await fetch(geolocationApi).then(data=>data.json()).then(data=>{
+                localStorage.setItem('countryCity', [data.city, data.countryName])
+            })
+    }
+
+
         async function getTimes(url) {
             const storedData = localStorage.getItem('prayerTimes');
             
@@ -52,7 +74,6 @@
             // Fetch new data from the API
             const res = await fetch(url);
             const newData = await res.json();
-            
             // Update the stored data
             const updatedData = {
                 data: newData['data'],
@@ -90,31 +111,36 @@
             return `<div class='time-remain'>${time[0]}:${time[1]}:${time[2]} - Remaining</div>`;
         }
 
+    async function main(){
+        await getLocation()
+        const names = localStorage.getItem('countryCity').split(',')
+        console.log(names);
+        let url = `http://api.aladhan.com/v1/timingsByCity?city=${names[0]}&country=${names[1]}&method=4`;
+        const filter = ['Sunset', 'Imsak', 'Midnight', 'Firstthird', 'Lastthird'];
+        const pray = document.getElementById('pray')
 
-let url = 'http://api.aladhan.com/v1/timingsByCity?city=Riyadh&country=Saudi Arabia&method=4';
-const filter = ['Sunset', 'Imsak', 'Midnight', 'Firstthird', 'Lastthird'];
-const pray = document.getElementById('pray')
+        getTimes(url).then(data => {
+            // filter unwanted times.
+            setInterval(() => {
+                let text = '';
+                let currentTime = new Date();
 
-getTimes(url).then(data => {
-    // filter unwanted times.
-    setInterval(() => {
-        let text = '';
-        let currentTime = new Date();
+                Object.keys(data).forEach((key) => {
+                    if (filter.indexOf(key) == -1) {
+                        let prayTime = new Date();
+                        const [h, m] = data[key].split(':');
+                        // set pray time
+                        prayTime.setHours(Number(h), Number(m), 0);
+                        let res = findDelta(currentTime, prayTime);
 
-        Object.keys(data).forEach((key) => {
-            if (filter.indexOf(key) == -1) {
-                let prayTime = new Date();
-                const [h, m] = data[key].split(':');
-                // set pray time
-                prayTime.setHours(Number(h), Number(m), 0);
-                let res = findDelta(currentTime, prayTime);
-
-                text += `<span>${key} => ${data[key]}${res}</span><br>`;
-            }
-        });
-        if (pray != null) pray.innerHTML = text;
-    }, 1000);
-})
+                        text += `<span>${key} => ${data[key]}${res}</span><br>`;
+                    }
+                });
+                if (pray != null) pray.innerHTML = text;
+            }, 1000);
+        })
+    }
+main()
     </script>
 </body>
 </html>
