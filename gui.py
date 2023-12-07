@@ -88,7 +88,7 @@ def displayTimes():
 
 app = tk.CTk()
 
-prayTimes = tk.CTkLabel(app, font=('maple mono', 26))
+prayTimes = tk.CTkLabel(app, font=('consolas', 26))
 prayTimes.pack()
 
 displayTimes()
