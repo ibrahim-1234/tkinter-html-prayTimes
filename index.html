@@ -36,26 +36,21 @@
     <div id="pray"></div>
 
     <script>
-        let loc = localStorage.getItem('location')
         async function getLocation(){
-            if(!loc){ 
+            if(!localStorage.getItem('countryCity')){
                 const pos = await new Promise((resolve, reject)=>{
                     navigator.geolocation.getCurrentPosition(resolve, reject)
                 })
                 const lat = pos.coords.latitude
                 const long = pos.coords.longitude
-                localStorage.setItem('location', [lat, long])
-                loc = localStorage.getItem('location')
+                
+                const geolocationApi = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${long}&localityLanguage=en`;
+
+                await fetch(geolocationApi).then(data=>data.json()).then(data=>{
+                    localStorage.setItem('countryCity', [data.city, data.countryName])
+                })
             }
-
-            let corArr = loc.split(',')
-            console.log(corArr);
-            const geolocationApi = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${corArr[0]}&longitude=${corArr[1]}&localityLanguage=en`;
-
-            await fetch(geolocationApi).then(data=>data.json()).then(data=>{
-                localStorage.setItem('countryCity', [data.city, data.countryName])
-            })
-    }
+        }
 
 
         async function getTimes(url) {
@@ -114,33 +109,33 @@
     async function main(){
         await getLocation()
         const names = localStorage.getItem('countryCity').split(',')
-        console.log(names);
         let url = `http://api.aladhan.com/v1/timingsByCity?city=${names[0]}&country=${names[1]}&method=4`;
         const filter = ['Sunset', 'Imsak', 'Midnight', 'Firstthird', 'Lastthird'];
         const pray = document.getElementById('pray')
 
-        getTimes(url).then(data => {
-            // filter unwanted times.
-            setInterval(() => {
+        let data = await getTimes(url)
+
+        filter.forEach(key=>{
+            if(data[key]) delete data[key]
+        })
+
+        setInterval(() => {
                 let text = '';
                 let currentTime = new Date();
 
                 Object.keys(data).forEach((key) => {
-                    if (filter.indexOf(key) == -1) {
-                        let prayTime = new Date();
-                        const [h, m] = data[key].split(':');
-                        // set pray time
-                        prayTime.setHours(Number(h), Number(m), 0);
-                        let res = findDelta(currentTime, prayTime);
+                    let prayTime = new Date();
+                    const [h, m] = data[key].split(':');
+                    // set pray time
+                    prayTime.setHours(Number(h), Number(m), 0);
+                    let res = findDelta(currentTime, prayTime);
 
-                        text += `<span>${key} => ${data[key]}${res}</span><br>`;
-                    }
+                    text += `<span>${key} => ${data[key]}${res}</span><br>`; 
                 });
                 if (pray != null) pray.innerHTML = text;
             }, 1000);
-        })
     }
-main()
+        main()
     </script>
 </body>
 </html>
