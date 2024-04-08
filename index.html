@@ -37,19 +37,17 @@
 
     <script>
         async function getLocation(){
-            if(!localStorage.getItem('countryCity')){
-                const pos = await new Promise((resolve, reject)=>{
-                    navigator.geolocation.getCurrentPosition(resolve, reject)
-                })
-                const lat = pos.coords.latitude
-                const long = pos.coords.longitude
-                
-                const geolocationApi = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${long}&localityLanguage=en`;
+           countryCity = localStorage.getItem('countryCity')
 
-                await fetch(geolocationApi).then(data=>data.json()).then(data=>{
-                    localStorage.setItem('countryCity', [data.city, data.countryName])
-                })
-            }
+           if(countryCity) return countryCity.split(',')
+
+           await fetch('https://ipapi.co/json/')
+           .then(data=>data.json())
+           .then(data=>{
+            localStorage.setItem('countryCity', `${data.city},${data.country_name}`)
+        })
+        return localStorage.getItem('countryCity').split(',')
+
         }
 
 
@@ -107,8 +105,8 @@
         }
 
     async function main(){
-        await getLocation()
-        const names = localStorage.getItem('countryCity').split(',')
+        const names = await getLocation()
+
         let url = `http://api.aladhan.com/v1/timingsByCity?city=${names[0]}&country=${names[1]}&method=4`;
         const filter = ['Sunset', 'Imsak', 'Midnight', 'Firstthird', 'Lastthird'];
         const pray = document.getElementById('pray')
