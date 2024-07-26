@@ -17,11 +17,17 @@
             color: aliceblue;
             font-size: 26px;
             font-family: Arial, Helvetica, sans-serif;
+            column-gap: 20px;
         }
 
         #pray{
             display: flex;
             flex-direction: column;
+        }
+        #prayName{
+            display: flex;
+            flex-direction: column;
+            row-gap: 59px;
         }
 
         .time{
@@ -32,7 +38,15 @@
         }
     </style>
 </head>
-<body>
+<body dir="rtl">
+    <div id="prayName">
+        <span>الفجر</span>
+        <span>الشروق</span>
+        <span>الظهر</span>
+        <span>العصر</span>
+        <span>المغرب</span>
+        <span>العشاء</span>
+    </div>
     <div id="pray"></div>
 
     <script>
@@ -97,11 +111,11 @@
             let time;
             if (t1 > t2) {
                 time = convertTime(Math.abs(t1 - t2));
-                return `<div class='time'>${time[0]}:${time[1]}:${time[2]} - PASSED</div>`;
+                return `<div class='time'>${time[0]}:${time[1]}:${time[2]} - إنتهت</div>`;
             }
 
             time = convertTime(Math.abs(t2 - t1));
-            return `<div class='time-remain'>${time[0]}:${time[1]}:${time[2]} - Remaining</div>`;
+            return `<div class='time-remain'>${time[0]}:${time[1]}:${time[2]} - باقي</div>`;
         }
 
     async function main(){
@@ -128,7 +142,7 @@
                     prayTime.setHours(Number(h), Number(m), 0);
                     let res = findDelta(currentTime, prayTime);
 
-                    text += `<span>${key} => ${data[key]}${res}</span><br>`; 
+                    text += `<span>${data[key]}${res}</span><br>`; 
                 });
                 if (pray != null) pray.innerHTML = text;
             }, 1000);
