@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -111,11 +112,17 @@
             let time;
             if (t1 > t2) {
                 time = convertTime(Math.abs(t1 - t2));
-                return `<div class='time'>${time[0]}:${time[1]}:${time[2]} - إنتهت</div>`;
+                let cell = document.createElement("div")
+                cell.className = "time"
+                cell.textContent = `${time[0]}:${time[1]}:${time[2]} - إنتهت`
+                return cell;
             }
 
             time = convertTime(Math.abs(t2 - t1));
-            return `<div class='time-remain'>${time[0]}:${time[1]}:${time[2]} - باقي</div>`;
+            let cell = document.createElement("div")
+                cell.className = "time-remain"
+                cell.textContent = `${time[0]}:${time[1]}:${time[2]} - باقي`
+            return cell;
         }
 
     async function main(){
@@ -134,6 +141,7 @@
         setInterval(() => {
                 let text = '';
                 let currentTime = new Date();
+                let frag = document.createDocumentFragment()
 
                 Object.keys(data).forEach((key) => {
                     let prayTime = new Date();
@@ -142,9 +150,17 @@
                     prayTime.setHours(Number(h), Number(m), 0);
                     let res = findDelta(currentTime, prayTime);
 
-                    text += `<span>${data[key]}${res}</span><br>`; 
+                    let span = document.createElement("span")
+                    span.textContent = `${data[key]}`
+                    span.appendChild(res)
+                    span.appendChild(document.createElement("br"))
+                    frag.appendChild(span)
+
                 });
-                if (pray != null) pray.innerHTML = text;
+                if (pray != null){
+                    pray.textContent = ""
+                    pray.appendChild(frag)
+                };
             }, 1000);
     }
         main()
