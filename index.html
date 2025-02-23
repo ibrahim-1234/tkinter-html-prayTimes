@@ -164,10 +164,10 @@
         }
     async function main(){
         let data = await getTimes()
-        mainApp(data)
-        setInterval(() => {
-                mainApp(data)
-            }, 1000);
+        while (true) {
+            mainApp(data)
+            await new Promise(r => setTimeout(r, 1000));
+        }
     }
         main()
     </script>
