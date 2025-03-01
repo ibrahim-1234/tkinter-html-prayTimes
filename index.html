@@ -86,10 +86,6 @@
 
         async function getTimes() {
 
-            const names = await getLocation()
-            let url = `http://api.aladhan.com/v1/timingsByCity?city=${names[0]}&country=${names[1]}&method=4`;
-            const filter = ['Sunset', 'Imsak', 'Midnight', 'Firstthird', 'Lastthird'];
-
             const storedData = localStorage.getItem('prayerTimes');
             
             if (storedData) {
@@ -101,6 +97,10 @@
                     return data;
                 }
             }
+
+            const names = await getLocation()
+            let url = `http://api.aladhan.com/v1/timingsByCity?city=${names[0]}&country=${names[1]}&method=4`;
+            const filter = ['Sunset', 'Imsak', 'Midnight', 'Firstthird', 'Lastthird'];
 
             // Fetch new data from the API
             const res = await fetch(url);
