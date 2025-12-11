@@ -74,11 +74,12 @@
 
            if(countryCity) return countryCity.split(',')
 
-           await fetch('https://ipapi.co/json/')
+           await fetch('https://ipinfo.io/json/')
            .then(data=>data.json())
            .then(data=>{
             localStorage.setItem('countryCity', `${data.city},${data.country_name}`)
-        })
+            
+        }).catch(err => alert(err))
         return localStorage.getItem('countryCity').split(',')
 
         }
@@ -103,7 +104,7 @@
             const filter = ['Sunset', 'Imsak', 'Midnight', 'Firstthird', 'Lastthird'];
 
             // Fetch new data from the API
-            const res = await fetch(url);
+            const res = await fetch(url).catch(err => alert(err));
             const newData = await res.json();
             const filtered = newData['data']['timings']
 
