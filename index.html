@@ -1,57 +1,58 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>pray times</title>
+    <title>Pray Times</title>
 
     <style>
-        :root{
-            --text-shadow: 0 0 1px rgb(77, 77, 77);
-        }
-        
-        body{
+        body {
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background-color: black;
+            background: black;
             color: aliceblue;
             font-size: 26px;
             font-family: Arial, Helvetica, sans-serif;
             row-gap: 20px;
         }
-        .container{
+
+        .container {
             display: flex;
             column-gap: 20px;
         }
-        .date-container{
+
+        .date-container {
             font-size: 32px;
         }
 
-        #pray{
+        #pray {
             display: flex;
             flex-direction: column;
-        }
-        #prayName{
-            display: flex;
-            flex-direction: column;
-            row-gap: 59px;
+            row-gap: 8px;
         }
 
-        .time{
+        #prayName {
+            display: flex;
+            flex-direction: column;
+            row-gap: 40px;
+        }
+
+        .time {
             color: tomato;
         }
-        .time-remain{
+
+        .time-remain {
             color: lime;
         }
     </style>
 </head>
+
 <body dir="rtl">
+
     <div class="date-container">
-        <!-- <span>التاريخ الهجري: </span> -->
         <span class="date"></span>
     </div>
 
@@ -66,131 +67,108 @@
         </div>
         <div id="pray"></div>
     </div>
-    
 
     <script>
-        async function getLocation(){
-           countryCity = localStorage.getItem('countryCity')
+        /* ------------------ LOCATION ------------------ */
+        async function getLocation() {
+            let cached = localStorage.getItem('countryCity');
+            if (cached) return cached.split(',');
 
-           if(countryCity) return countryCity.split(',')
-
-           await fetch('https://ipinfo.io/json/')
-           .then(data=>data.json())
-           .then(data=>{
-            localStorage.setItem('countryCity', `${data.city},${data.country_name}`)
-            
-        }).catch(err => alert(err))
-        return localStorage.getItem('countryCity').split(',')
-
+            const res = await fetch('https://ipinfo.io/json/');
+            const data = await res.json();
+            localStorage.setItem('countryCity', `${data.city},${data.country_name}`);
+            return [data.city, data.country_name];
         }
 
-
+        /* ------------------ PRAYER TIMES ------------------ */
         async function getTimes() {
+            const cached = localStorage.getItem('prayerTimes');
+            const today = new Date().toDateString();
 
-            const storedData = localStorage.getItem('prayerTimes');
-            
-            if (storedData) {
-                const { data, lastUpdated } = JSON.parse(storedData);
-                const currentDate = new Date();
+            if (cached) {
+                const { data, date } = JSON.parse(cached);
+                if (date === today) return data;
+            }
 
-                // Check if the stored data is from today
-                if (currentDate.toDateString() === new Date(lastUpdated).toDateString()) {
-                    return data;
+            const [city, country] = await getLocation();
+            const url = `https://api.aladhan.com/v1/timingsByCity?city=${city}&country=${country}&method=4`;
+            const res = await fetch(url);
+            const json = await res.json();
+
+            const remove = ['Sunset', 'Imsak', 'Midnight', 'Firstthird', 'Lastthird'];
+            const timings = json.data.timings;
+            remove.forEach(k => delete timings[k]);
+
+            localStorage.setItem('prayerTimes', JSON.stringify({
+                data: timings,
+                date: today
+            }));
+
+            return timings;
+        }
+
+        /* ------------------ TIME HELPERS ------------------ */
+        function pad(n) { return n < 10 ? '0' + n : n; }
+
+        function format(ms) {
+            const s = Math.floor(ms / 1000);
+            const h = pad(Math.floor(s / 3600));
+            const m = pad(Math.floor((s % 3600) / 60));
+            const sec = pad(s % 60);
+            return `${h}:${m}:${sec}`;
+        }
+
+        /* ------------------ UI UPDATE ------------------ */
+        function render(data) {
+            const now = new Date();
+            const container = document.getElementById('pray');
+            container.innerHTML = '';
+
+            Object.entries(data).forEach(([name, time]) => {
+                const [h, m] = time.split(':').map(Number);
+                const target = new Date();
+                target.setHours(h, m, 0, 0);
+
+                let diff = target - now;
+                let span = document.createElement('span');
+
+                if (diff <= 0) {
+                    span.innerHTML = `${time} <br> <span class="time">${format(-diff)} - انتهت</span>`;
+                } else {
+                    span.innerHTML = `${time} <br> <span class="time-remain">${format(diff)} - باقي</span>`;
                 }
+
+                container.appendChild(span);
+            });
+        }
+
+        /* ------------------ CLOCK (NO DRIFT) ------------------ */
+        function startClock(data) {
+            let lastSecond = -1;
+
+            function tick() {
+                const now = new Date();
+                if (now.getSeconds() !== lastSecond) {
+                    lastSecond = now.getSeconds();
+                    render(data);
+                }
+                requestAnimationFrame(tick);
             }
-
-            const names = await getLocation()
-            let url = `http://api.aladhan.com/v1/timingsByCity?city=${names[0]}&country=${names[1]}&method=4`;
-            const filter = ['Sunset', 'Imsak', 'Midnight', 'Firstthird', 'Lastthird'];
-
-            // Fetch new data from the API
-            const res = await fetch(url).catch(err => alert(err));
-            const newData = await res.json();
-            const filtered = newData['data']['timings']
-
-            filter.forEach(key=>{
-            if(filtered[key]) delete filtered[key]
-        })
-        
-
-            // Update the stored data
-            const updatedData = {
-                data: filtered,
-                lastUpdated: new Date().toISOString(),
-            };
-            localStorage.setItem('prayerTimes', JSON.stringify(updatedData));
-
-            return filtered;
+            tick();
         }
 
+        /* ------------------ MAIN ------------------ */
+        async function main() {
+            const hijri = new Intl.DateTimeFormat('ar-SA', { calendar: 'islamic' }).format(new Date());
+            document.querySelector('.date').textContent = hijri;
 
-        function padZero(number) {
-            return number < 10 ? `0${number}` : `${number}`;
+            const data = await getTimes();
+            startClock(data);
         }
 
-
-        function convertTime(mil) {
-            const date = new Date(mil);
-            const hours = padZero(date.getUTCHours());
-            const minutes = padZero(date.getUTCMinutes());
-            const seconds = padZero(date.getUTCSeconds());
-
-            return [hours, minutes, seconds];
-        }
-
-
-        function findDelta(t1, t2) {
-            let time;
-            if (t1 > t2) {
-                time = convertTime(Math.abs(t1 - t2));
-                let cell = document.createElement("div")
-                cell.className = "time"
-                cell.textContent = `${time[0]}:${time[1]}:${time[2]} - إنتهت`
-                return cell;
-            }
-
-            time = convertTime(Math.abs(t2 - t1));
-            let cell = document.createElement("div")
-                cell.className = "time-remain"
-                cell.textContent = `${time[0]}:${time[1]}:${time[2]} - باقي`
-            return cell;
-        }
-
-        async function mainApp(data) {
-            let text = '';
-            let currentTime = new Date();
-            let frag = document.createDocumentFragment()
-            const pray = document.getElementById('pray')
-
-                Object.keys(data).forEach((key) => {
-                    let prayTime = new Date();
-                    const [h, m] = data[key].split(':');
-                    // set pray time
-                    prayTime.setHours(Number(h), Number(m), 0);
-                    let res = findDelta(currentTime, prayTime);
-
-                    let span = document.createElement("span")
-                    span.textContent = `${data[key]}`
-                    span.appendChild(res)
-                    span.appendChild(document.createElement("br"))
-                    frag.appendChild(span)
-
-                });
-                if (pray != null){
-                    pray.textContent = ""
-                    pray.appendChild(frag)
-                };
-        }
-    async function main(){
-        const hijriDate = new Intl.DateTimeFormat('ar-SA', { calendar: 'islamic' }).format(new Date());
-        document.querySelector(".date").textContent = hijriDate
-        let data = await getTimes()
-        while (true) {
-            mainApp(data)
-            await new Promise(r => setTimeout(r, 1000));
-        }
-    }
-        main()
+        main();
     </script>
+
 </body>
+
 </html>
