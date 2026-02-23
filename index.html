@@ -159,7 +159,7 @@
 
         /* ------------------ MAIN ------------------ */
         async function main() {
-            const hijri = new Intl.DateTimeFormat('ar-SA', { calendar: 'islamic' }).format(new Date());
+            const hijri = new Intl.DateTimeFormat('ar-SA', { calendar: 'islamic-umalqura',  timeZone: 'Asia/Riyadh' }).format(new Date());
             document.querySelector('.date').textContent = hijri;
 
             const data = await getTimes();
@@ -172,3 +172,4 @@
 </body>
 
 </html>
+
